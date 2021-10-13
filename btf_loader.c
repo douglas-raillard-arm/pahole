@@ -471,10 +471,37 @@ static int btf__load_sections(struct btf *btf, struct cu *cu)
 	return btf__load_types(btf, cu);
 }
 
+static uint32_t class__infer_alignment(uint32_t byte_offset,
+				       uint32_t natural_alignment,
+				       uint32_t smallest_offset)
+{
+	uint32_t alignment = 0;
+	uint32_t offset_delta = byte_offset - smallest_offset;
+
+	if (offset_delta) {
+		if (byte_offset % 2 == 0) {
+			/* Find the power of 2 immediately higher than
+			 * offset_delta
+			 */
+			alignment = 1 << (8 * sizeof(offset_delta) -
+					      __builtin_clz(offset_delta));
+		} else {
+			alignment = 0;
+		}
+	}
+
+	/* Natural alignment, nothing to do */
+	if (alignment <= natural_alignment || alignment == 1)
+		alignment = 0;
+
+	return alignment;
+}
+
 static int class__fixup_btf_bitfields(struct tag *tag, struct cu *cu)
 {
 	struct class_member *pos;
 	struct type *tag_type = tag__type(tag);
+	uint32_t smallest_offset = 0;
 
 	type__for_each_data_member(tag_type, pos) {
 		struct tag *type = tag__strip_typedefs_and_modifiers(&pos->tag, cu);
@@ -486,30 +513,38 @@ static int class__fixup_btf_bitfields(struct tag *tag, struct cu *cu)
 		pos->byte_size = tag__size(type, cu);
 		pos->bit_size = pos->byte_size * 8;
 
-		/* bitfield fixup is needed for enums and base types only */
-		if (type->tag != DW_TAG_base_type && type->tag != DW_TAG_enumeration_type)
-			continue;
-
 		/* if BTF data is incorrect and has size == 0, skip field,
 		 * instead of crashing */
 		if (pos->byte_size == 0) {
 			continue;
 		}
 
-		if (pos->bitfield_size) {
-			/* bitfields seem to be always aligned, no matter the packing */
-			pos->byte_offset = pos->bit_offset / pos->bit_size * pos->bit_size / 8;
-			pos->bitfield_offset = pos->bit_offset - pos->byte_offset * 8;
-			/* re-adjust bitfield offset if it is negative */
-			if (pos->bitfield_offset < 0) {
-				pos->bitfield_offset += pos->bit_size;
-				pos->byte_offset -= pos->byte_size;
-				pos->bit_offset = pos->byte_offset * 8 + pos->bitfield_offset;
+		/* bitfield fixup is needed for enums and base types only */
+		if (type->tag == DW_TAG_base_type || type->tag == DW_TAG_enumeration_type) {
+			if (pos->bitfield_size) {
+				/* bitfields seem to be always aligned, no matter the packing */
+				pos->byte_offset = pos->bit_offset / pos->bit_size * pos->bit_size / 8;
+				pos->bitfield_offset = pos->bit_offset - pos->byte_offset * 8;
+				/* re-adjust bitfield offset if it is negative */
+				if (pos->bitfield_offset < 0) {
+					pos->bitfield_offset += pos->bit_size;
+					pos->byte_offset -= pos->byte_size;
+					pos->bit_offset = pos->byte_offset * 8 + pos->bitfield_offset;
+				}
+			} else {
+				pos->byte_offset = pos->bit_offset / 8;
 			}
-		} else {
-			pos->byte_offset = pos->bit_offset / 8;
 		}
+
+		pos->alignment = class__infer_alignment(pos->byte_offset,
+							tag__natural_alignment(type, cu),
+							smallest_offset);
+		smallest_offset = pos->byte_offset + pos->byte_size;
 	}
+
+	tag_type->alignment = class__infer_alignment(tag_type->size,
+						     tag__natural_alignment(tag, cu),
+						     smallest_offset);
 
 	return 0;
 }
@@ -518,6 +553,7 @@ static int cu__fixup_btf_bitfields(struct cu *cu)
 {
 	int err = 0;
 	struct tag *pos;
+
 
 	list_for_each_entry(pos, &cu->tags, node)
 		if (tag__is_struct(pos) || tag__is_union(pos)) {
