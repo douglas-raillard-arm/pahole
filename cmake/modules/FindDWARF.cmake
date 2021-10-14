@@ -37,6 +37,21 @@ find_library(ELF_LIBRARY
 	PATHS /usr/lib /usr/local/lib /usr/lib64 /usr/local/lib64 ~/usr/local/lib ~/usr/local/lib64
 )
 
+find_library(BZ2_LIBRARY
+	NAMES bz2
+	PATHS /usr/lib /usr/local/lib /usr/lib64 /usr/local/lib64 ~/usr/local/lib ~/usr/local/lib64
+)
+
+find_library(LZMA_LIBRARY
+	NAMES lzma liblzma
+	PATHS /usr/lib /usr/local/lib /usr/lib64 /usr/local/lib64 ~/usr/local/lib ~/usr/local/lib64
+)
+
+find_library(ZSTD_LIBRARY
+	NAMES zstd libzstd
+	PATHS /usr/lib /usr/local/lib /usr/lib64 /usr/local/lib64 ~/usr/local/lib ~/usr/local/lib64
+)
+
 if (DWARF_INCLUDE_DIR AND LIBDW_INCLUDE_DIR AND DWARF_LIBRARY AND ELF_LIBRARY)
 	set(DWARF_FOUND TRUE)
 	set(DWARF_LIBRARIES ${DWARF_LIBRARY} ${ELF_LIBRARY})
