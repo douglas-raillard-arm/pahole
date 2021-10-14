@@ -34,6 +34,15 @@ macro(_set_fancy _var _value _comment)
 	endif (NOT DEFINED ${_var})
 endmacro(_set_fancy)
 
+option(BUILD_SHARED_LIBS "Build internal libraries as shared libraries" ON)
+option(STATIC_LINK "Create statically linked executables" OFF)
+if (STATIC_LINK)
+  string(APPEND CMAKE_C_FLAGS " -static")
+  string(APPEND CMAKE_EXE_LINKER_FLAGS " -static")
+  set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
+  set(BUILD_SHARED_LIBS OFF)
+endif()
+
 # where to look first for cmake modules,
 # before ${CMAKE_ROOT}/Modules/ is checked
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
@@ -47,11 +56,6 @@ endif (NOT CMAKE_BUILD_TYPE)
 set(CMAKE_C_FLAGS_DEBUG "-Wall -Werror -ggdb -O0")
 set(CMAKE_C_FLAGS_RELEASE "-Wall -O2")
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
-
-if (NOT DEFINED BUILD_SHARED_LIBS)
-	set (BUILD_SHARED_LIBS ON)
-	message(STATUS "Setting BUILD_SHARED_LIBS = ${BUILD_SHARED_LIBS}")
-endif (NOT DEFINED BUILD_SHARED_LIBS)
 
 # Just for grepping, DWARVES_VERSION isn't used anywhere anymore
 # add_definitions(-D_GNU_SOURCE -DDWARVES_VERSION="v1.25")
@@ -123,7 +127,7 @@ endif()
 add_library(dwarves ${dwarves_LIB_SRCS})
 set_target_properties(dwarves PROPERTIES VERSION 1.0.0 SOVERSION 1)
 set_target_properties(dwarves PROPERTIES INTERFACE_LINK_LIBRARIES "")
-target_link_libraries(dwarves ${DWARF_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBBPF_LIBRARIES} ${ARGP_LIBRARY} ${OBSTACK_LIBRARY})
+target_link_libraries(dwarves ${DWARF_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBBPF_LIBRARIES} ${ARGP_LIBRARY} ${OBSTACK_LIBRARY} ${BZ2_LIBRARY} ${LZMA_LIBRARY} ${ZSTD_LIBRARY})
 
 set(dwarves_emit_LIB_SRCS dwarves_emit.c)
 add_library(dwarves_emit ${dwarves_emit_LIB_SRCS})
@@ -193,3 +197,8 @@ endif()
 install(PROGRAMS btfdiff fullcircle DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 install(FILES lib/Makefile lib/ctracer_relay.c lib/ctracer_relay.h lib/linux.blacklist.cu
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/dwarves/runtime)
+
+# Avoid having a trailing -Wl,-Bdynamic that will make some linkers think we
+# need to link against a DSO for the libc.
+get_property(TARGETS DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+set_target_properties(${TARGETS} PROPERTIES LINK_SEARCH_END_STATIC ${STATIC_LINK})
