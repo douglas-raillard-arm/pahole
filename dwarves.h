@@ -99,6 +99,7 @@ struct conf_fprintf {
 	uint8_t	   indent;
 	uint8_t	   expand_types:1;
 	uint8_t	   expand_pointers:1;
+	uint8_t	   inner_anonymous:1;
 	uint8_t    rel_offset:1;
 	uint8_t	   emit_stats:1;
 	uint8_t	   suppress_comments:1;
@@ -1329,7 +1330,8 @@ static inline const char *enumerator__name(const struct enumerator *enumerator)
 void enumeration__delete(struct type *type);
 void enumeration__add(struct type *type, struct enumerator *enumerator);
 size_t enumeration__fprintf(const struct tag *tag_enum,
-			    const struct conf_fprintf *conf, FILE *fp);
+			    const struct conf_fprintf *conf, FILE *fp,
+			    bool anonymous);
 
 int dwarves__init(uint16_t user_cacheline_size);
 void dwarves__exit(void);
