@@ -27,6 +27,14 @@ find_path(LIBDW_INCLUDE_DIR elfutils/libdw.h
 	~/usr/local/include
 )
 
+# This does not seem to be necessary on Alpine Linux
+if (LINUX_DISTRO STREQUAL "Ubuntu")
+  find_library(EBL_LIBRARY
+    NAMES ebl
+    PATHS /usr/lib /usr/local/lib /usr/lib64 /usr/local/lib64 ~/usr/local/lib ~/usr/local/lib64
+  )
+endif()
+
 find_library(DWARF_LIBRARY
 	NAMES dw dwarf
 	PATHS /usr/lib /usr/local/lib /usr/lib64 /usr/local/lib64 ~/usr/local/lib ~/usr/local/lib64
