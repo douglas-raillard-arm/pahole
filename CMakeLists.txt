@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 2.8.12)
 project(pahole C)
 cmake_policy(SET CMP0005 NEW)
 
+execute_process(COMMAND lsb_release -si
+  OUTPUT_VARIABLE LINUX_DISTRO
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
 option(LIBBPF_EMBEDDED "Use the embedded version of libbpf instead of searching it via pkg-config" ON)
 if (NOT LIBBPF_EMBEDDED)
 	find_package(PkgConfig REQUIRED)
@@ -127,7 +132,12 @@ endif()
 add_library(dwarves ${dwarves_LIB_SRCS})
 set_target_properties(dwarves PROPERTIES VERSION 1.0.0 SOVERSION 1)
 set_target_properties(dwarves PROPERTIES INTERFACE_LINK_LIBRARIES "")
-target_link_libraries(dwarves ${DWARF_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBBPF_LIBRARIES} ${ARGP_LIBRARY} ${OBSTACK_LIBRARY} ${BZ2_LIBRARY} ${LZMA_LIBRARY} ${ZSTD_LIBRARY})
+target_link_libraries(dwarves ${DWARF_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBBPF_LIBRARIES} ${ARGP_LIBRARY} ${OBSTACK_LIBRARY} ${BZ2_LIBRARY} ${LZMA_LIBRARY} ${ZSTD_LIBRARY} ${EBL_LIBRARY})
+# On non-musl systems, we need to link to libdl in order to get
+# dlopen/dlclose/dlsym, as required by libdwfl and libebl
+if (LINUX_DISTRO STREQUAL "Ubuntu")
+  target_link_libraries(dwarves dl)
+endif()
 
 set(dwarves_emit_LIB_SRCS dwarves_emit.c)
 add_library(dwarves_emit ${dwarves_emit_LIB_SRCS})
@@ -201,4 +211,8 @@ install(FILES lib/Makefile lib/ctracer_relay.c lib/ctracer_relay.h lib/linux.bla
 # Avoid having a trailing -Wl,-Bdynamic that will make some linkers think we
 # need to link against a DSO for the libc.
 get_property(TARGETS DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
-set_target_properties(${TARGETS} PROPERTIES LINK_SEARCH_END_STATIC ${STATIC_LINK})
+# If we use a trailing -Wl,-Bstatic on ubuntu, the binary will segfault for some
+# reasons ...
+if (NOT LINUX_DISTRO STREQUAL "Ubuntu")
+  set_target_properties(${TARGETS} PROPERTIES LINK_SEARCH_END_STATIC ${STATIC_LINK})
+endif()
