@@ -554,6 +554,7 @@ static int cu__fixup_btf_bitfields(struct cu *cu)
 	int err = 0;
 	struct tag *pos;
 
+
 	list_for_each_entry(pos, &cu->tags, node)
 		if (tag__is_struct(pos) || tag__is_union(pos)) {
 			err = class__fixup_btf_bitfields(pos, cu);

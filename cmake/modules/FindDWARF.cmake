@@ -27,6 +27,7 @@ find_path(LIBDW_INCLUDE_DIR elfutils/libdw.h
 	~/usr/local/include
 )
 
+# set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
 find_library(DWARF_LIBRARY
 	NAMES dw dwarf
 	PATHS /usr/lib /usr/local/lib /usr/lib64 /usr/local/lib64 ~/usr/local/lib ~/usr/local/lib64
@@ -34,6 +35,16 @@ find_library(DWARF_LIBRARY
 
 find_library(ELF_LIBRARY
 	NAMES elf
+	PATHS /usr/lib /usr/local/lib /usr/lib64 /usr/local/lib64 ~/usr/local/lib ~/usr/local/lib64
+)
+
+find_library(BZ2_LIBRARY
+	NAMES bz2
+	PATHS /usr/lib /usr/local/lib /usr/lib64 /usr/local/lib64 ~/usr/local/lib ~/usr/local/lib64
+)
+
+find_library(LZMA_LIBRARY
+	NAMES lzma
 	PATHS /usr/lib /usr/local/lib /usr/lib64 /usr/local/lib64 ~/usr/local/lib ~/usr/local/lib64
 )
 
