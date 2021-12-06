@@ -476,7 +476,7 @@ static const char *tag__ptr_name(const struct tag *tag, const struct cu *cu,
 
 			snprintf(bf, len, "%s %s%s",
 				 __tag__name(type, cu,
-					     tmpbf, sizeof(tmpbf), NULL),
+					     tmpbf, sizeof(tmpbf), conf),
 				 const_pointer,
 				 ptr_suffix);
 		}
