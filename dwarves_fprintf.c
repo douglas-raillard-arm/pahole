@@ -278,8 +278,8 @@ size_t typedef__fprintf(const struct tag *tag, const struct cu *cu,
 {
 	struct type *type = tag__type(tag);
 	const struct conf_fprintf *pconf = conf ?: &conf_fprintf__defaults;
-	const struct tag *tag_type;
-	const struct tag *ptr_type;
+	struct tag *tag_type;
+	struct tag *ptr_type;
 	char bf[512];
 	int is_pointer = 0;
 	size_t printed;
@@ -396,7 +396,7 @@ out:
 	return type->max_tag_name_len;
 }
 
-size_t enumeration__fprintf(const struct tag *tag, const struct conf_fprintf *conf, FILE *fp)
+size_t enumeration__fprintf(struct tag *tag, const struct conf_fprintf *conf, FILE *fp)
 {
 	struct type *type = tag__type(tag);
 	struct enumerator *pos;
@@ -407,6 +407,7 @@ size_t enumeration__fprintf(const struct tag *tag, const struct conf_fprintf *co
 				 type__name(type) ? type__name(type) : "");
 
 	int indent = conf->indent;
+	tag->visited = 1;
 
 	if (indent >= (int)sizeof(tabs))
 		indent = sizeof(tabs) - 1;
@@ -664,9 +665,13 @@ static size_t type__fprintf(struct tag *type, const struct cu *cu,
 	size_t printed = 0;
 	int expand_types = conf->expand_types;
 	int suppress_offset_comment = conf->suppress_offset_comment;
+	bool visited;
 
 	if (type == NULL)
 		goto out_type_not_found;
+
+	visited = type->visited;
+	type->visited = 1;
 
 	if (conf->expand_pointers) {
 		int nr_indirections = 0;
@@ -807,7 +812,7 @@ print_default:
 	case DW_TAG_structure_type:
 		ctype = tag__type(type);
 
-		if (type__name(ctype) != NULL && !expand_types) {
+		if (type__name(ctype) != NULL && (!expand_types || visited)) {
 			printed += fprintf(fp, "%s %s%-*s %s",
 					   (type->tag == DW_TAG_class_type &&
 					    !tconf.classes_as_structs) ? "class" : "struct",
@@ -1018,6 +1023,8 @@ static size_t union__fprintf(struct type *type, const struct cu *cu,
 	struct conf_fprintf uconf;
 	uint32_t initial_union_cacheline;
 	uint32_t cacheline = 0; /* This will only be used if this is the outermost union */
+
+	type__tag(type)->visited = 1;
 
 	if (indent >= (int)sizeof(tabs))
 		indent = sizeof(tabs) - 1;
@@ -1418,6 +1425,8 @@ static size_t __class__fprintf(struct class *class, const struct cu *cu,
 				 type__name(type) && conf->name_prefix ? conf->name_prefix : "",
 				 type__name(type) ?: "");
 	int indent = cconf.indent;
+
+	class__tag(class)->visited = 1;
 
 	if (indent >= (int)sizeof(tabs))
 		indent = sizeof(tabs) - 1;
@@ -1881,6 +1890,7 @@ size_t tag__fprintf(struct tag *tag, const struct cu *cu,
 	size_t printed = 0;
 	struct conf_fprintf tconf;
 	const struct conf_fprintf *pconf = conf;
+	tag->visited = 1;
 
 	if (conf == NULL) {
 		tconf = conf_fprintf__defaults;

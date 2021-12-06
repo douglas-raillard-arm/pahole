@@ -1371,7 +1371,7 @@ static inline const char *enumerator__name(const struct enumerator *enumerator)
 
 void enumeration__delete(struct type *type);
 void enumeration__add(struct type *type, struct enumerator *enumerator);
-size_t enumeration__fprintf(const struct tag *tag_enum,
+size_t enumeration__fprintf(struct tag *tag_enum,
 			    const struct conf_fprintf *conf, FILE *fp);
 
 int dwarves__init(void);
