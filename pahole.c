@@ -1127,6 +1127,7 @@ ARGP_PROGRAM_VERSION_HOOK_DEF = dwarves_print_version;
 #define ARGP_skip_encoding_btf_decl_tag 331
 #define ARGP_skip_missing          332
 #define ARGP_skip_encoding_btf_type_tag 333
+#define ARGP_name_prefix 334
 
 static const struct argp_option pahole__options[] = {
 	{
@@ -1233,6 +1234,12 @@ static const struct argp_option pahole__options[] = {
 		.name = "expand_types",
 		.key  = 'E',
 		.doc  = "expand class members",
+	},
+	{
+		.name = "name_prefix",
+		.key  = ARGP_name_prefix,
+		.arg  = "NAME_PREFIX",
+		.doc  = "Add prefix to type names for manual namespacing",
 	},
 	{
 		.name = "nr_members",
@@ -1666,6 +1673,8 @@ static error_t pahole__options_parser(int key, char *arg,
 		conf_load.skip_missing = true;          break;
 	case ARGP_skip_encoding_btf_type_tag:
 		conf_load.skip_encoding_btf_type_tag = true;	break;
+	case ARGP_name_prefix:
+		conf.name_prefix = arg;                 break;
 	default:
 		return ARGP_ERR_UNKNOWN;
 	}
