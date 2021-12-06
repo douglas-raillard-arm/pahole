@@ -135,6 +135,7 @@ struct conf_fprintf {
 	uint8_t	   skip_emitting_atomic_typedefs:1;
 	uint8_t	   skip_emitting_errors:1;
 	uint8_t    skip_emitting_modifier:1;
+	uint8_t	   print_once:1;
 };
 
 struct cus;
@@ -440,6 +441,7 @@ struct tag {
 	type_id_t	 type;
 	uint16_t	 tag;
 	bool		 visited;
+	bool		 __printed;
 	bool		 top_level;
 	bool		 has_btf_type_tag;
 	uint16_t	 recursivity_level;
@@ -453,6 +455,11 @@ struct tag_cu {
 };
 
 void tag__delete(struct tag *tag);
+
+static inline int tag__is_printed(const struct conf_fprintf *conf, const struct tag *tag)
+{
+	return tag->__printed && conf->print_once;
+}
 
 static inline int tag__is_enumeration(const struct tag *tag)
 {
@@ -1452,7 +1459,7 @@ static inline const char *enumerator__name(const struct enumerator *enumerator)
 
 void enumeration__delete(struct type *type);
 void enumeration__add(struct type *type, struct enumerator *enumerator);
-size_t enumeration__fprintf(const struct tag *tag_enum,
+size_t enumeration__fprintf(struct tag *tag_enum,
 			    const struct conf_fprintf *conf, FILE *fp);
 
 int dwarves__init(void);

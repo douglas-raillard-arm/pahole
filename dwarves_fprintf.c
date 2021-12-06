@@ -301,8 +301,8 @@ size_t typedef__fprintf(const struct tag *tag, const struct cu *cu,
 {
 	struct type *type = tag__type(tag);
 	const struct conf_fprintf *pconf = conf ?: &conf_fprintf__defaults;
-	const struct tag *tag_type;
-	const struct tag *ptr_type;
+	struct tag *tag_type;
+	struct tag *ptr_type;
 	char bf[512];
 	int is_pointer = 0;
 	size_t printed = fprintf(fp, "typedef ");
@@ -417,13 +417,14 @@ out:
 	return type->max_tag_name_len;
 }
 
-size_t enumeration__fprintf(const struct tag *tag, const struct conf_fprintf *conf, FILE *fp)
+size_t enumeration__fprintf(struct tag *tag, const struct conf_fprintf *conf, FILE *fp)
 {
 	struct type *type = tag__type(tag);
 	struct enumerator *pos;
 	int max_entry_name_len = enumeration__max_entry_name_len(type);
 	size_t printed = fprintf(fp, "enum%s%s", type__name(type) ? " " : "", type__name(type) ?: "");
 	int indent = conf->indent;
+	tag->__printed = 1;
 
 	if (indent >= (int)sizeof(tabs))
 		indent = sizeof(tabs) - 1;
@@ -717,9 +718,13 @@ static size_t type__fprintf(struct tag *type, const struct cu *cu,
 	size_t printed = 0;
 	int expand_types = conf->expand_types;
 	int suppress_offset_comment = conf->suppress_offset_comment;
+	bool type_printed;
 
 	if (type == NULL)
 		goto out_type_not_found;
+
+	type_printed = tag__is_printed(conf, type);
+	type->__printed = 1;
 
 	if (conf->expand_pointers) {
 		int nr_indirections = 0;
@@ -735,6 +740,8 @@ static size_t type__fprintf(struct tag *type, const struct cu *cu,
 					return printed;
 			}
 			type = ttype;
+			type_printed = tag__is_printed(conf, type);
+			type->__printed++;
 			++nr_indirections;
 		}
 
@@ -780,6 +787,8 @@ static size_t type__fprintf(struct tag *type, const struct cu *cu,
 			if (n)
 				return printed + n;
 			type = type_type;
+			type_printed = tag__is_printed(conf, type);
+			type->__printed++;
 		}
 		if (typedef_expanded)
 			printed += fprintf(fp, " */ ");
@@ -872,7 +881,7 @@ print_modifier: {
 	case DW_TAG_structure_type:
 		ctype = tag__type(type);
 
-		if (type__name(ctype) != NULL && !expand_types) {
+		if (type__name(ctype) != NULL && (!expand_types || type_printed)) {
 			printed += fprintf(fp, "%s %-*s %s",
 					   (type->tag == DW_TAG_class_type &&
 					    !tconf.classes_as_structs) ? "class" : "struct",
@@ -891,7 +900,7 @@ print_modifier: {
 	case DW_TAG_union_type:
 		ctype = tag__type(type);
 
-		if (type__name(ctype) != NULL && !expand_types) {
+		if (type__name(ctype) != NULL && (!expand_types || type_printed)) {
 			printed += fprintf(fp, "union %-*s %s", tconf.type_spacing - 6, type__name(ctype), name ?: "");
 		} else {
 			tconf.type_spacing -= 8;
@@ -901,7 +910,7 @@ print_modifier: {
 	case DW_TAG_enumeration_type:
 		ctype = tag__type(type);
 
-		if (type__name(ctype) != NULL)
+		if (type__name(ctype) != NULL || type_printed)
 			printed += fprintf(fp, "enum %-*s %s", tconf.type_spacing - 5, type__name(ctype), name ?: "");
 		else
 			printed += enumeration__fprintf(type, &tconf, fp);
@@ -1085,6 +1094,8 @@ static size_t union__fprintf(struct type *type, const struct cu *cu,
 	struct conf_fprintf uconf;
 	uint32_t initial_union_cacheline;
 	uint32_t cacheline = 0; /* This will only be used if this is the outermost union */
+
+	type__tag(type)->__printed = 1;
 
 	if (indent >= (int)sizeof(tabs))
 		indent = sizeof(tabs) - 1;
@@ -1492,6 +1503,8 @@ static size_t __class__fprintf(struct class *class, const struct cu *cu,
 				 type__name(type) ? " " : "",
 				 type__name(type) ?: "");
 	int indent = cconf.indent;
+
+	class__tag(class)->__printed = 1;
 
 	if (indent >= (int)sizeof(tabs))
 		indent = sizeof(tabs) - 1;
@@ -1973,6 +1986,7 @@ size_t tag__fprintf(struct tag *tag, const struct cu *cu,
 	size_t printed = 0;
 	struct conf_fprintf tconf;
 	const struct conf_fprintf *pconf = conf;
+	tag->__printed = 1;
 
 	if (conf == NULL) {
 		tconf = conf_fprintf__defaults;
