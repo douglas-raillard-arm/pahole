@@ -1221,6 +1221,7 @@ ARGP_PROGRAM_VERSION_HOOK_DEF = dwarves_print_version;
 #define ARGP_languages		   335
 #define ARGP_languages_exclude	   336
 #define ARGP_expand_types_once     337
+#define ARGP_expanded_prefix       338
 
 static const struct argp_option pahole__options[] = {
 	{
@@ -1332,6 +1333,12 @@ static const struct argp_option pahole__options[] = {
 		.name = "expand_types_once",
 		.key  = ARGP_expand_types_once,
 		.doc  = "expand class member types once, and then refer to types by name",
+	},
+	{
+		.name = "expanded_prefix",
+		.key  = ARGP_expanded_prefix,
+		.arg  = "NAME_PREFIX",
+		.doc  = "Add prefix to all the nested types displayed with --expand_types",
 	},
 	{
 		.name = "nr_members",
@@ -1796,6 +1803,8 @@ static error_t pahole__options_parser(int key, char *arg,
 		/* fallthru */
 	case ARGP_languages:
 		languages.str = arg;			break;
+	case ARGP_expanded_prefix:
+		conf.name_prefix = arg;                 break;
 	default:
 		return ARGP_ERR_UNKNOWN;
 	}
