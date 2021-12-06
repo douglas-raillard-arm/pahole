@@ -141,6 +141,11 @@ the type is designated by its name. This allows compiling the resulting header
 while avoiding redefinitions.
 
 .TP
+.B \-\-expanded_prefix
+Add prefix to type names that are not specified using --class_name. This helps
+avoiding conflicts with existing headers in types expanded by --expand_types.
+
+.TP
 .B \-F, \-\-format_path
 Allows specifying a list of debugging formats to try, in order. Right now this
 includes "ctf" and "dwarf". The default format path used is equivalent to
