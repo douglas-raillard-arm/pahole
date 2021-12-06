@@ -3195,22 +3195,24 @@ out_btf:
 			goto dump_it;
 		}
 
-		if (class)
-			class__find_holes(tag__class(class));
-		if (reorganize) {
-			if (class && tag__is_struct(class))
-				do_reorg(class, cu);
-		} else if (find_containers)
-			print_containers(cu, class_id, 0);
-		else if (find_pointers_in_structs)
-			print_structs_with_pointer_to(cu, class_id);
-		else if (class) {
-			/*
-			 * We don't need to print it for every compile unit
-			 * but the previous options need
-			 */
-			tag__fprintf(class, cu, &conf, stdout);
-			putchar('\n');
+		if (!tag__is_printed(&conf, class)) {
+			if (class)
+				class__find_holes(tag__class(class));
+			if (reorganize) {
+				if (class && tag__is_struct(class))
+					do_reorg(class, cu);
+			} else if (find_containers)
+				print_containers(cu, class_id, 0);
+			else if (find_pointers_in_structs)
+				print_structs_with_pointer_to(cu, class_id);
+			else if (class) {
+				/*
+				 * We don't need to print it for every compile unit
+				 * but the previous options need
+				 */
+				tag__fprintf(class, cu, &conf, stdout);
+				putchar('\n');
+			}
 		}
 	}
 
