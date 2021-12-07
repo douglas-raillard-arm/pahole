@@ -93,6 +93,7 @@ struct conf_load {
  */
 struct conf_fprintf {
 	const char *prefix;
+	const char *name_prefix;
 	const char *suffix;
 	int32_t	   type_spacing;
 	int32_t	   name_spacing;
