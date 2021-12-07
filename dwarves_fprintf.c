@@ -219,9 +219,6 @@ size_t tag__fprintf_decl_info(const struct tag *tag,
 
 static size_t __class__fprintf(struct class *class, const struct cu *cu,
 			       const struct conf_fprintf *conf, FILE *fp);
-static size_t type__fprintf(struct tag *type, const struct cu *cu,
-			    const char *name, const struct conf_fprintf *conf,
-			    FILE *fp);
 
 static size_t array_type__fprintf(const struct tag *tag,
 				  const struct cu *cu, const char *name,
@@ -667,7 +664,7 @@ static size_t type__fprintf_stats(struct type *type, const struct cu *cu,
 static size_t union__fprintf(struct type *type, const struct cu *cu,
 			     const struct conf_fprintf *conf, FILE *fp);
 
-static size_t type__fprintf(struct tag *type, const struct cu *cu,
+size_t type__fprintf(struct tag *type, const struct cu *cu,
 			    const char *name, const struct conf_fprintf *conf,
 			    FILE *fp)
 {

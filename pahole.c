@@ -60,6 +60,8 @@ static size_t cu__exclude_prefix_len;
 static char *decl_exclude_prefix;
 static size_t decl_exclude_prefix_len;
 
+static bool print_forward_decl;
+
 static uint16_t nr_holes;
 static uint16_t nr_bit_holes;
 static uint16_t hole_size_ge;
@@ -1222,6 +1224,7 @@ ARGP_PROGRAM_VERSION_HOOK_DEF = dwarves_print_version;
 #define ARGP_languages_exclude	   336
 #define ARGP_expand_types_once     337
 #define ARGP_expanded_prefix       338
+#define ARGP_forward_decl          339
 
 static const struct argp_option pahole__options[] = {
 	{
@@ -1339,6 +1342,11 @@ static const struct argp_option pahole__options[] = {
 		.key  = ARGP_expanded_prefix,
 		.arg  = "NAME_PREFIX",
 		.doc  = "Add prefix to all the nested types displayed with --expand_types",
+	},
+	{
+		.name = "forward_decl",
+		.key  = ARGP_forward_decl,
+		.doc  = "Print a forward declaration for types that support it",
 	},
 	{
 		.name = "nr_members",
@@ -1805,6 +1813,8 @@ static error_t pahole__options_parser(int key, char *arg,
 		languages.str = arg;			break;
 	case ARGP_expanded_prefix:
 		conf.name_prefix = arg;                 break;
+	case ARGP_forward_decl:
+		print_forward_decl = true;                 break;
 	default:
 		return ARGP_ERR_UNKNOWN;
 	}
@@ -3138,6 +3148,10 @@ out_btf:
 	bool skip;
 	const char *prefix = conf_load->conf_fprintf->name_prefix;
 	const size_t prefix_len = prefix ? strlen(prefix) : 0;
+
+	struct conf_fprintf pconf = *conf_load->conf_fprintf;
+	pconf.expand_types = false;
+
 	cu__for_each_type(cu, id, pos) {
 		if (tag__is_type(pos)) {
 			const char *name = type__name(tag__type(pos));
@@ -3155,6 +3169,14 @@ out_btf:
 					snprintf(bf, len, "%s%s", prefix, name);
 					tag__namespace(pos)->name = bf;
 				}
+			}
+		}
+		if (print_forward_decl && (tag__is_union(pos) || tag__is_struct(pos))) {
+			const char *name = type__name(tag__type(pos));
+			if (name) {
+				type__fprintf(pos, cu, NULL, &pconf, stdout);
+				pos->__printed = 0;
+				printf(";\n");
 			}
 		}
 	}
