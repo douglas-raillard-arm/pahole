@@ -3122,6 +3122,33 @@ out_btf:
 
 	bool include_decls = find_pointers_in_structs != 0 || stats_formatter == nr_methods_formatter;
 	struct prototype *prototype, *n;
+	static type_id_t class_id;
+
+	uint32_t id;
+	struct tag *pos;
+	bool skip;
+	const char *prefix = conf_load->conf_fprintf->name_prefix;
+	const size_t prefix_len = prefix ? strlen(prefix) : 0;
+	cu__for_each_type(cu, id, pos) {
+		if (tag__is_type(pos)) {
+			const char *name = type__name(tag__type(pos));
+			if (name && prefix) {
+				skip = false;
+				list_for_each_entry_safe(prototype, n, &class_names, node) {
+					if (!strcmp(prototype->name, name)) {
+						skip = true;
+						break;
+					}
+				}
+				if (!skip) {
+					const size_t len = 1024 + prefix_len;
+					char *bf = malloc(len);
+					snprintf(bf, len, "%s%s", prefix, name);
+					tag__namespace(pos)->name = bf;
+				}
+			}
+		}
+	}
 
 	list_for_each_entry_safe(prototype, n, &class_names, node) {
 
@@ -3131,8 +3158,6 @@ out_btf:
 				prototype->type_enum_resolved = type__find_type_enum(tag__type(prototype->class), cu, prototype->type_enum) == 0;
 			continue;
 		}
-
-		static type_id_t class_id;
 		struct tag *class = cu__find_type_by_name(cu, prototype->name, include_decls, &class_id);
 
 		// couldn't find that class name in this CU, continue to the next one.
