@@ -1058,6 +1058,10 @@ struct type {
 
 void __type__init(struct type *type);
 
+size_t type__fprintf(struct tag *type, const struct cu *cu,
+		     const char *name, const struct conf_fprintf *conf,
+		     FILE *fp);
+
 size_t tag__natural_alignment(struct tag *tag, const struct cu *cu);
 
 static inline struct class *type__class(const struct type *type)
