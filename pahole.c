@@ -1220,6 +1220,7 @@ ARGP_PROGRAM_VERSION_HOOK_DEF = dwarves_print_version;
 #define ARGP_compile		   334
 #define ARGP_languages		   335
 #define ARGP_languages_exclude	   336
+#define ARGP_expand_types_once     337
 
 static const struct argp_option pahole__options[] = {
 	{
@@ -1326,6 +1327,11 @@ static const struct argp_option pahole__options[] = {
 		.name = "expand_types",
 		.key  = 'E',
 		.doc  = "expand class members",
+	},
+	{
+		.name = "expand_types_once",
+		.key  = ARGP_expand_types_once,
+		.doc  = "expand class member types once, and then refer to types by name",
 	},
 	{
 		.name = "nr_members",
@@ -1645,6 +1651,9 @@ static error_t pahole__options_parser(int key, char *arg,
 		  conf_load.extra_dbg_info = 1;		break;
 	case 'd': recursive = 1;			break;
 	case 'E': conf.expand_types = 1;		break;
+	case ARGP_expand_types_once:
+		  conf.print_once = 1;
+		  conf.expand_types = 1;		break;
 	case 'f': find_pointers_in_structs = 1;
 		  class_name = arg;			break;
 	case 'F': conf_load.format_path = arg;		break;
