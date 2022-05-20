@@ -613,7 +613,8 @@ static int cus__load_btf(struct cus *cus, struct conf_load *conf, const char *fi
 
 	cu->priv = btf;
 	cu->little_endian = btf__endianness(btf) == BTF_LITTLE_ENDIAN;
-	cu->addr_size	  = btf__pointer_size(btf);
+	if (!cu->addr_size)
+		cu->addr_size	  = btf__pointer_size(btf);
 
 	err = btf__load_sections(btf, cu);
 	if (err != 0)
