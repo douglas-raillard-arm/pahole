@@ -2703,3 +2703,24 @@ void dwarves_print_numeric_version(FILE *fp)
 {
 	fprintf(fp, "%u%u\n", DWARVES_MAJOR_VERSION, DWARVES_MINOR_VERSION);
 }
+
+
+// Workaround that issue, where libelf.a relies on an unresolved "error()"
+// symbol.
+//
+// https://gitlab.alpinelinux.org/alpine/aports/-/issues/14370
+static unsigned int error_message_count = 0;
+void error(int status, int errnum, const char* format, ...)
+{
+	va_list ap;
+	fprintf(stderr, "%s: ", program_invocation_name);
+	va_start(ap, format);
+	vfprintf(stderr, format, ap);
+	va_end(ap);
+	if (errnum)
+		fprintf(stderr, ": %s", strerror(errnum));
+	fprintf(stderr, "\n");
+	error_message_count++;
+	if (status)
+		exit(status);
+}
