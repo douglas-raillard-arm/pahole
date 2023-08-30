@@ -920,7 +920,7 @@ void ftype__delete(struct ftype *ftype);
 void ftype__add_parameter(struct ftype *ftype, struct parameter *parm);
 size_t ftype__fprintf(const struct ftype *ftype, const struct cu *cu,
 		      const char *name, const int inlined,
-		      const int is_pointer, const int type_spacing, bool is_prototype,
+		      const int is_pointer, const int is_volatile, const int type_spacing, bool is_prototype,
 		      const struct conf_fprintf *conf, FILE *fp);
 size_t ftype__fprintf_parms(const struct ftype *ftype,
 			    const struct cu *cu, int indent,
