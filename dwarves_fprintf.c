@@ -342,7 +342,7 @@ next_type:
 		/* Fall thru */
 	case DW_TAG_subroutine_type:
 		return printed + ftype__fprintf(tag__ftype(tag_type), cu, type__name(type),
-						0, is_pointer, 0, true, pconf, fp);
+						0, is_pointer, 0, 0, true, pconf, fp);
 	case DW_TAG_class_type:
 	case DW_TAG_structure_type: {
 		struct type *ctype = tag__type(tag_type);
@@ -604,7 +604,7 @@ static const char *__tag__name(const struct tag *tag, const struct cu *cu,
 		FILE *bfp = fmemopen(bf, len, "w");
 
 		if (bfp != NULL) {
-			ftype__fprintf(tag__ftype(tag), cu, NULL, 0, 0, 0, true, pconf, bfp);
+			ftype__fprintf(tag__ftype(tag), cu, NULL, 0, 0, 0, 0, true, pconf, bfp);
 			fclose(bfp);
 		} else
 			snprintf(bf, len, "<ERROR(%s): fmemopen failed!>",
@@ -805,15 +805,22 @@ next_type:
 
 		if (ptype_id != 0) {
 			int n;
+			int is_volatile = 0;
 			struct tag *ptype = cu__type(cu, ptype_id);
 			if (ptype == NULL)
 				goto out_type_not_found;
 			n = tag__has_type_loop(type, ptype, NULL, 0, fp);
 			if (n)
 				return printed + n;
+
+			while (ptype->tag == DW_TAG_volatile_type) {
+				is_volatile = 1;
+				ptype = cu__type(cu, ptype->type);
+			}
+
 			if (ptype->tag == DW_TAG_subroutine_type) {
 				printed += ftype__fprintf(tag__ftype(ptype),
-							  cu, name, 0, 1,
+							  cu, name, 0, 1, is_volatile,
 							  tconf.type_spacing, true,
 							  &tconf, fp);
 				break;
@@ -839,9 +846,15 @@ print_default:
 				   name);
 		break;
 	case DW_TAG_subroutine_type:
-		printed += ftype__fprintf(tag__ftype(type), cu, name, 0, 0,
+		printed += ftype__fprintf(tag__ftype(type), cu, name, 0, 0, 0,
 					  tconf.type_spacing, true, &tconf, fp);
 		break;
+	case DW_TAG_volatile_type:
+		modifier = "volatile";
+		goto print_modifier;
+	case DW_TAG_restrict_type:
+		modifier = "restrict";
+		goto print_modifier;
 	case DW_TAG_atomic_type:
 		modifier = "_Atomic";
 		goto print_modifier;
@@ -1150,7 +1163,7 @@ const char *function__prototype_conf(const struct function *func,
 	FILE *bfp = fmemopen(bf, len, "w");
 
 	if (bfp != NULL) {
-		ftype__fprintf(&func->proto, cu, NULL, 0, 0, 0, true, conf,
+		ftype__fprintf(&func->proto, cu, NULL, 0, 0, 0, 0, true, conf,
 			       bfp);
 		fclose(bfp);
 	} else {
@@ -1212,14 +1225,14 @@ size_t ftype__fprintf_parms(const struct ftype *ftype,
 				if (ptype->tag == DW_TAG_subroutine_type) {
 					printed +=
 					     ftype__fprintf(tag__ftype(ptype),
-							    cu, name, 0, 1, 0,
+							    cu, name, 0, 1, 0, 0,
 							    true, conf, fp);
 					continue;
 				}
 			}
 		} else if (type->tag == DW_TAG_subroutine_type) {
 			printed += ftype__fprintf(tag__ftype(type), cu, name,
-						  true, 0, 0, 0, conf, fp);
+						  true, 0, 0, 0, 0, conf, fp);
 			continue;
 		}
 		stype = tag__name(type, cu, sbf, sizeof(sbf), conf);
@@ -1350,19 +1363,27 @@ size_t lexblock__fprintf(const struct lexblock *block, const struct cu *cu,
 	return printed;
 }
 
-size_t ftype__fprintf(const struct ftype *ftype, const struct cu *cu,
-		      const char *name, const int inlined,
-		      const int is_pointer, int type_spacing, bool is_prototype,
-		      const struct conf_fprintf *conf, FILE *fp)
+size_t ftype__fprintf(const struct ftype *ftype,
+		      const struct cu *cu,
+		      const char *name,
+		      const int inlined,
+		      const int is_pointer,
+		      const int is_volatile,
+		      int type_spacing,
+		      bool is_prototype,
+		      const struct conf_fprintf *conf,
+		      FILE *fp)
 {
 	struct tag *type = cu__type(cu, ftype->tag.type);
 	char sbf[128];
 	const char *stype = tag__name(type, cu, sbf, sizeof(sbf), conf);
-	size_t printed = fprintf(fp, "%s%-*s %s%s%s%s",
+	size_t printed = fprintf(fp, "%s%-*s %s%s%s%s%s",
 				 inlined ? "inline " : "",
 				 type_spacing, stype,
 				 is_prototype ?  "(" : "",
-				 is_pointer ? "*" : "", name ?: "",
+				 is_pointer ? "*" : "",
+				 is_volatile ? "volatile " : "",
+				 name ?: "",
 				 is_prototype ?  ")" : "");
 
 	return printed + ftype__fprintf_parms(ftype, cu, 0, conf, fp);
@@ -1381,7 +1402,7 @@ static size_t function__fprintf(const struct tag *tag, const struct cu *cu,
 		printed += fprintf(fp, "virtual ");
 
 	printed += ftype__fprintf(ftype, cu, function__name(func),
-				  inlined, 0, 0, false, conf, fp);
+				  inlined, 0, false, 0, false, conf, fp);
 
 	if (func->virtuality == DW_VIRTUALITY_pure_virtual)
 		printed += fprintf(fp, " = 0");
@@ -2023,7 +2044,7 @@ size_t tag__fprintf(struct tag *tag, const struct cu *cu,
 		printed += __class__fprintf(tag__class(tag), cu, pconf, fp);
 		break;
 	case DW_TAG_subroutine_type:
-		printed += ftype__fprintf(tag__ftype(tag), cu, NULL, false, false, 0, true, pconf, fp);
+		printed += ftype__fprintf(tag__ftype(tag), cu, NULL, false, false, false, 0, true, pconf, fp);
 		break;
 	case DW_TAG_namespace:
 		printed += namespace__fprintf(tag, cu, pconf, fp);
