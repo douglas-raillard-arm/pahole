@@ -441,7 +441,7 @@ struct tag {
 	type_id_t	 type;
 	uint16_t	 tag;
 	bool		 visited;
-	bool		 __printed;
+	uint32_t	 __printed;
 	bool		 top_level;
 	bool		 has_btf_type_tag;
 	uint16_t	 recursivity_level;
