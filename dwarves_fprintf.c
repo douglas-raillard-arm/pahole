@@ -424,7 +424,7 @@ size_t enumeration__fprintf(struct tag *tag, const struct conf_fprintf *conf, FI
 	int max_entry_name_len = enumeration__max_entry_name_len(type);
 	size_t printed = fprintf(fp, "enum%s%s", type__name(type) ? " " : "", type__name(type) ?: "");
 	int indent = conf->indent;
-	tag->__printed = 1;
+	int member_prefix = conf->print_once ? (tag->__printed ? tag->__printed - 1 : 0) : 0;
 
 	if (indent >= (int)sizeof(tabs))
 		indent = sizeof(tabs) - 1;
@@ -439,8 +439,10 @@ size_t enumeration__fprintf(struct tag *tag, const struct conf_fprintf *conf, FI
 	}
 
 	type__for_each_enumerator(type, pos) {
-		printed += fprintf(fp, "%.*s\t%-*s = ", indent, tabs,
-				   max_entry_name_len, enumerator__name(pos));
+		printed += fprintf(fp, "%.*s\t", indent, tabs);
+		if (member_prefix)
+			printed += fprintf(fp, "__PAHOLE__%" PRIu32 "_", member_prefix);
+		printed += fprintf(fp, "%-*s = ", max_entry_name_len, enumerator__name(pos));
 		if (conf->hex_fmt)
 			printed += fprintf(fp, "%#llx", (unsigned long long)pos->value);
 		else
@@ -724,7 +726,7 @@ static size_t type__fprintf(struct tag *type, const struct cu *cu,
 		goto out_type_not_found;
 
 	type_printed = tag__is_printed(conf, type);
-	type->__printed = 1;
+	type->__printed++;
 
 	if (conf->expand_pointers) {
 		int nr_indirections = 0;
@@ -910,7 +912,7 @@ print_modifier: {
 	case DW_TAG_enumeration_type:
 		ctype = tag__type(type);
 
-		if (type__name(ctype) != NULL || type_printed)
+		if (type__name(ctype) != NULL)
 			printed += fprintf(fp, "enum %-*s %s", tconf.type_spacing - 5, type__name(ctype), name ?: "");
 		else
 			printed += enumeration__fprintf(type, &tconf, fp);
@@ -1094,8 +1096,6 @@ static size_t union__fprintf(struct type *type, const struct cu *cu,
 	struct conf_fprintf uconf;
 	uint32_t initial_union_cacheline;
 	uint32_t cacheline = 0; /* This will only be used if this is the outermost union */
-
-	type__tag(type)->__printed = 1;
 
 	if (indent >= (int)sizeof(tabs))
 		indent = sizeof(tabs) - 1;
@@ -1503,8 +1503,6 @@ static size_t __class__fprintf(struct class *class, const struct cu *cu,
 				 type__name(type) ? " " : "",
 				 type__name(type) ?: "");
 	int indent = cconf.indent;
-
-	class__tag(class)->__printed = 1;
 
 	if (indent >= (int)sizeof(tabs))
 		indent = sizeof(tabs) - 1;
@@ -1986,7 +1984,7 @@ size_t tag__fprintf(struct tag *tag, const struct cu *cu,
 	size_t printed = 0;
 	struct conf_fprintf tconf;
 	const struct conf_fprintf *pconf = conf;
-	tag->__printed = 1;
+	tag->__printed++;
 
 	if (conf == NULL) {
 		tconf = conf_fprintf__defaults;
