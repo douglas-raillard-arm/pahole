@@ -711,13 +711,12 @@ static size_t type__fprintf(struct tag *type, const struct cu *cu,
 	char namebfptr[258];
 	struct type *ctype;
 	struct tag *type_expanded = NULL;
-	struct conf_fprintf tconf = {
-		.type_spacing = conf->type_spacing,
-	};
+	struct conf_fprintf tconf = *conf;
 	size_t printed = 0;
 	int expand_types = conf->expand_types;
 	int suppress_offset_comment = conf->suppress_offset_comment;
 
+next_type:
 	if (type == NULL)
 		goto out_type_not_found;
 
@@ -785,8 +784,6 @@ static size_t type__fprintf(struct tag *type, const struct cu *cu,
 			printed += fprintf(fp, " */ ");
 	}
 
-	tconf = *conf;
-
 	if (tag__is_struct(type) || tag__is_union(type) ||
 	    tag__is_enumeration(type)) {
 inner_struct:
@@ -798,7 +795,6 @@ inner_struct:
 
 	const char *modifier;
 
-next_type:
 	switch (type->tag) {
 	case DW_TAG_pointer_type: {
 		type_id_t ptype_id = skip_llvm_annotations(cu, type->type);
