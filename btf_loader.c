@@ -106,7 +106,7 @@ static struct base_type *base_type__new(const char *name, uint32_t attrs,
 		bt->bit_size = size;
 		bt->is_signed = attrs & BTF_INT_SIGNED;
 		bt->is_bool = attrs & BTF_INT_BOOL;
-		bt->name_has_encoding = false;
+		bt->name_has_encoding = true;
 		bt->float_type = float_type;
 		INIT_LIST_HEAD(&bt->node);
 	}
@@ -176,7 +176,15 @@ static int create_new_int_type(struct cu *cu, const struct btf_type *tp, uint32_
 static int create_new_float_type(struct cu *cu, const struct btf_type *tp, uint32_t id)
 {
 	const char *name = cu__btf_str(cu, tp->name_off);
-	struct base_type *base = base_type__new(name, 0, BT_FP_SINGLE, tp->size * 8);
+	int bitsize = tp->size * 8;
+	enum base_type_float_type type;
+	switch (bitsize) {
+		case 16: type = BT_FP_SINGLE; break;
+		case 32: type = BT_FP_SINGLE; break;
+		case 64: type = BT_FP_DOUBLE; break;
+		default: type = BT_FP_LDBL; break;
+	};
+	struct base_type *base = base_type__new(name, 0, type, bitsize);
 
 	if (base == NULL)
 		return -ENOMEM;
