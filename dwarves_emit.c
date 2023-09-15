@@ -140,8 +140,10 @@ static int typedef__emit_definitions(struct tag *tdef, struct cu *cu,
 				     struct type_emissions *emissions, FILE *fp)
 {
 	struct type *def = tag__type(tdef);
-	struct tag *type, *ptr_type;
+	struct tag *type;
+	type = cu__type(cu, tdef->type);
 
+next_type:
 	/* Have we already emitted this in this CU? */
 	if (def->definition_emitted)
 		return 0;
@@ -156,7 +158,6 @@ static int typedef__emit_definitions(struct tag *tdef, struct cu *cu,
 		return 0;
 	}
 
-	type = cu__type(cu, tdef->type);
 	if (type == NULL) // void
 		goto emit;
 
@@ -174,18 +175,10 @@ static int typedef__emit_definitions(struct tag *tdef, struct cu *cu,
 	case DW_TAG_typedef:
 		typedef__emit_definitions(type, cu, emissions, fp);
 		break;
+	case DW_TAG_LLVM_annotation:
 	case DW_TAG_pointer_type:
-		ptr_type = cu__type(cu, type->type);
-		/* void ** can make ptr_type be NULL */
-		if (ptr_type == NULL)
-			break;
-		if (ptr_type->tag == DW_TAG_typedef) {
-			typedef__emit_definitions(ptr_type, cu, emissions, fp);
-			break;
-		} else if (ptr_type->tag != DW_TAG_subroutine_type)
-			break;
-		type = ptr_type;
-		/* Fall thru */
+		type = cu__type(cu, type->type);
+		goto next_type;
 	case DW_TAG_subroutine_type:
 		ftype__emit_definitions(tag__ftype(type), cu, emissions, fp);
 		break;
